@@ -160,8 +160,8 @@ ClassManager.getNewID=function(){
         //         this[p] = this[p];
         //     }
         //
-        // because using for keyed assignment (this[x] = y instead of
-        // this.x = y) is almost certainly going to make an object switch
+        // because using keyed assignment (this[x] = y instead of this.x = y) 
+        // is almost certainly going to make an object switch
         // to dictionary mode in V8. 
         //
         // See https://github.com/oupengsoftware/v8/wiki/Dictionary-mode-%28English%29#wiki-append-property
