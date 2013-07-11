@@ -31,16 +31,40 @@
  * @return {Array|object}
  */
 cc.clone = function (obj) {
-    var newObj = (obj instanceof Array) ? [] : {};
-    for (var key in obj) {
+    // Cloning is better if the new object is having the same prototype chain
+    // as the copied obj (or otherwise, the cloned object is certainly going to
+    // have a different hidden class). Object.getPrototypeOf([...]) is an 
+    // array of 0 length so that's certainly not the thing whose properties 
+    // are enumerated.
+    var toEnum = (obj instanceof Array) ? obj : Object.getPrototypeOf(obj);
+    var newObj = (obj instanceof Array) ? [] : Object.create(toEnum);
+
+    var releaseMode = (document['ccConfig'] && document['ccConfig']['CLASS_RELEASE_MODE']) ? document['ccConfig']['CLASS_RELEASE_MODE'] : null;
+    // None of the prototype has ._super so we need to assign it first and it's
+    // always the first own property.
+    if (obj instanceof cc.Class && releaseMode)
+        newObj._super = null;
+
+    // Here we assume that the property enumeration order of the prototype
+    // stays the same - the order when it's used to create intitialization
+    // list in Class (and that's the same object, so very likely true), see 
+    // CCClass.js. We don't enumerate properties on obj because who knows if 
+    // the property order changes (but unlikely). We use Object.defineProperty
+    // to avoid keyed assignment. Again, see CCClass.js for a link to the 
+    // devils.
+    var desc = {writable: true, enumerable: true, configurable: true};
+    for (var key in toEnum) {
         var copy = obj[key];
         if (copy instanceof Array) {
-            newObj[key] = cc.clone(copy);
-        } else if (((typeof copy) == "object") && !(copy instanceof cc.Node)
-            && !(copy instanceof HTMLElement)) {
-            newObj[key] = cc.clone(copy);
+            desc.value = cc.clone(copy);
+            Object.defineProperty(newObj, key, desc);
+        } else if (((typeof copy) == "object") && copy &&
+            !(copy instanceof cc.Node) && !(copy instanceof HTMLElement)) {
+            desc.value = cc.clone(copy);
+            Object.defineProperty(newObj, key, desc);
         } else {
-            newObj[key] = copy;
+            desc.value = copy;
+            Object.defineProperty(newObj, key, desc);
         }
     }
     return newObj;
