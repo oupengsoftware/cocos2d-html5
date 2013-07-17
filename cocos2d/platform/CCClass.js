@@ -112,7 +112,7 @@ ClassManager.getNewID=function(){
         ClassManager[classId] = _super;
         // Copy the properties over onto the new prototype. We make function
         // properties non-eumerable as this makes typeof === 'function' check
-        // unneccessary in the for...in loop used 1) for generating Class() 
+        // unneccessary in the for...in loop used 1) for generating Class()
         // 2) for cc.clone and perhaps more. It is also required to make
         // these function properties cacheable in Carakan.
         var desc = { writable: true, enumerable: false, configurable: true };
@@ -152,7 +152,7 @@ ClassManager.getNewID=function(){
 
         // The dummy Class constructor. The properties are initialized in
         // the constructor in advance so that the hidden class an instance
-        // of this belongs is stable. We need to create this constructor on 
+        // of this belongs is stable. We need to create this constructor on
         // the fly with "new Function" intead of doing
         //
         //     function Class () {
@@ -160,9 +160,9 @@ ClassManager.getNewID=function(){
         //         this[p] = this[p];
         //     }
         //
-        // because using keyed assignment (this[x] = y instead of this.x = y) 
+        // because using keyed assignment (this[x] = y instead of this.x = y)
         // is almost certainly going to make an object switch
-        // to dictionary mode in V8. 
+        // to dictionary mode in V8.
         //
         // See https://github.com/oupengsoftware/v8/wiki/Dictionary-mode-%28English%29#wiki-append-property
         //
@@ -175,7 +175,7 @@ ClassManager.getNewID=function(){
         var Class = new Function(functionBody);
 
         Class.id = classId;
-        // desc = { writable: true, enumerable: false, configurable: true, 
+        // desc = { writable: true, enumerable: false, configurable: true,
         //          value: XXX }; Again, we make this non-enumerable.
         desc.value = classId;
         Object.defineProperty(prototype, '__pid', desc);
