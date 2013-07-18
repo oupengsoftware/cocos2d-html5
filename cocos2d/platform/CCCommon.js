@@ -33,38 +33,36 @@
 cc.clone = function (obj) {
     // Cloning is better if the new object is having the same prototype chain
     // as the copied obj (or otherwise, the cloned object is certainly going to
-    // have a different hidden class). Object.getPrototypeOf([...]) is an 
-    // array of 0 length so that's certainly not the thing whose properties 
-    // are enumerated.
-    var toEnum = (obj instanceof Array) ? obj : Object.getPrototypeOf(obj);
-    var newObj = (obj instanceof Array) ? [] : Object.create(toEnum);
+    // have a different hidden class). Play with C1/C2 of the
+    // PerformanceVirtualMachineTests suite to see how this makes an impact
+    // under extreme conditions.
+    //
+    // Object.create(Object.getPrototypeOf(obj)) doesn't work well because the
+    // prototype lacks a link to the constructor (Carakan, V8) so the new
+    // object wouldn't have the hidden class that's associated with the
+    // constructor (also, for whatever reasons, utilizing
+    // Object.create(Object.getPrototypeOf(obj)) + Object.defineProperty is even
+    // slower than the original in V8). Therefore, we call the constructor, but
+    // there is a big caveat - it is possible that the this.init() in the
+    // constructor would throw with no argument. It is also possible that a
+    // derived class forgets to set "constructor" on the prototype. We ignore
+    // these possibities for and the ultimate solution is a standardized
+    // Object.clone(<object>).
+    var newObj = new obj.constructor;
 
-    var releaseMode = (document['ccConfig'] && document['ccConfig']['CLASS_RELEASE_MODE']) ? document['ccConfig']['CLASS_RELEASE_MODE'] : null;
-    // None of the prototype has ._super so we need to assign it first and it's
-    // always the first own property.
-    if (obj instanceof cc.Class && releaseMode)
-        newObj._super = null;
-
-    // Here we assume that the property enumeration order of the prototype
-    // stays the same - the order when it's used to create intitialization
-    // list in Class (and that's the same object, so very likely true), see 
-    // CCClass.js. We don't enumerate properties on obj because who knows if 
-    // the property order changes (but unlikely). We use Object.defineProperty
-    // to avoid keyed assignment. Again, see CCClass.js for a link to the 
-    // devils.
-    var desc = {writable: true, enumerable: true, configurable: true};
-    for (var key in toEnum) {
+    // Assuming that the constuctor above initialized all properies on obj, the
+    // following keyed assignments won't turn newObj into dictionary mode
+    // becasue they're not *appending new properties* but *assigning existing
+    // ones* (note that appending indexed properties is another story). See
+    // CCClass.js for a link to the devils when the assumption fails.
+    for (var key in obj) {
         var copy = obj[key];
-        if (copy instanceof Array) {
-            desc.value = cc.clone(copy);
-            Object.defineProperty(newObj, key, desc);
-        } else if (((typeof copy) == "object") && copy &&
+        // Beware that typeof null == "object" !
+        if (((typeof copy) == "object") && copy &&
             !(copy instanceof cc.Node) && !(copy instanceof HTMLElement)) {
-            desc.value = cc.clone(copy);
-            Object.defineProperty(newObj, key, desc);
+            newObj[key] = cc.clone(copy);
         } else {
-            desc.value = copy;
-            Object.defineProperty(newObj, key, desc);
+            newObj[key] = copy;
         }
     }
     return newObj;
